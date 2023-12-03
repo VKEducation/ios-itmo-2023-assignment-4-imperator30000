@@ -2,6 +2,10 @@ import Foundation
 
 class ThreadSafeArray<T>  {
     private var array: [T] = []
+    private let lock = RWLock()
+    required init(_ elements: [T] = []) {
+        array = elements
+    }
 }
 
 extension ThreadSafeArray: RandomAccessCollection {
@@ -12,10 +16,28 @@ extension ThreadSafeArray: RandomAccessCollection {
     var endIndex: Index { return array.endIndex }
 
     subscript(index: Index) -> Element {
-        get { return array[index] }
+        get { lock.read {array[index]} }
+        set { lock.write {array[index] = newValue } }
+        
     }
 
     func index(after i: Index) -> Index {
-        return array.index(after: i)
+        return  lock.read { array.index(after: i) }
+    }
+}
+
+extension ThreadSafeArray {
+    func append(_ newElement: Element) {
+        lock.write { array.append(newElement) }
+    }
+    func sort(by areInIncreasingOrder: @escaping (Element, Element) -> Bool) {
+       lock.write {
+           array.sort(by: areInIncreasingOrder)
+       }
+    }
+    func reverse() {
+        lock.write {
+            array.reverse()
+        }
     }
 }
